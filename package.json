@@ -1,0 +1,16 @@
+{
+  "name": "sp500-signal",
+  "version": "1.0.0",
+  "description": "Daily S&P 500 direction signal bot",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "now": "node index.js --now"
+  },
+  "dependencies": {
+    "node-cron": "^3.0.0",
+    "node-fetch": "^3.3.0",
+    "dotenv": "^16.0.0"
+  }
+}
