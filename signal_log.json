@@ -1,0 +1,48 @@
+{
+  "criteria_version": "1.1",
+  "signals": [
+    {
+      "date": "2026-05-07",
+      "verdict": "BUY VUAA NOW",
+      "score": 5,
+      "signals": [
+        {
+          "name": "VUAA PRICE",
+          "status": "+1.23% BULLISH",
+          "score": 2
+        },
+        {
+          "name": "VIX",
+          "status": "17.4 NEUTRAL",
+          "score": 0
+        },
+        {
+          "name": "MOMENTUM",
+          "status": "ABOVE OPEN — BUYERS IN CONTROL",
+          "score": 2
+        },
+        {
+          "name": "VIX/VUAA ALIGN",
+          "status": "MIXED SIGNALS",
+          "score": 0
+        },
+        {
+          "name": "NEWS/MACRO",
+          "status": "NO MAJOR EVENTS",
+          "score": 1
+        }
+      ],
+      "outcome": "up",
+      "vuaa_change": 1.23,
+      "correct": true,
+      "result": "✅ CORRECT — bought, VUAA up 1.23%",
+      "logged_at": "2026-05-07T06:16:59.088Z"
+    }
+  ],
+  "accuracy": {
+    "total": 1,
+    "correct": 1,
+    "wrong": 0,
+    "hit_rate": "100.0%"
+  }
+}

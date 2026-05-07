@@ -1,164 +1,93 @@
-// src/scoreSignals.js — applies the 5-signal framework
-
+// src/scoreSignals.js — scoring for VUAA signal
 export function scoreSignals(data) {
-  const { futures, vix, spy, newsData } = data;
+  const { vuaa, vix, newsData } = data;
   const signals = [];
   let totalScore = 0;
 
-  // ── SIGNAL 1: FUTURES (weight 30%, max +2/-2) ──────────────
-  const futuresPct = futures.changePct || 0;
-  let futuresScore = 0;
-  let futuresStatus = "";
-  let futuresEmoji = "";
+  // ── SIGNAL 1: VUAA PRICE ACTION ──────────────────────────────
+  // Is VUAA already moving up from yesterday's close?
+  const vuaaChg = vuaa.changePct || 0;
+  let s1Score = 0, s1Status = "", s1Emoji = "";
 
-  if (futuresPct >= 0.3) {
-    futuresScore = 2;
-    futuresStatus = `+${futuresPct.toFixed(2)}% BULLISH`;
-    futuresEmoji = "✅";
-  } else if (futuresPct <= -0.3) {
-    futuresScore = -2;
-    futuresStatus = `${futuresPct.toFixed(2)}% BEARISH`;
-    futuresEmoji = "❌";
+  if (vuaaChg >= 0.3) {
+    s1Score = 2; s1Status = `+${vuaaChg.toFixed(2)}% BULLISH`; s1Emoji = "✅";
+  } else if (vuaaChg <= -0.3) {
+    s1Score = -2; s1Status = `${vuaaChg.toFixed(2)}% BEARISH`; s1Emoji = "❌";
   } else {
-    futuresScore = 0;
-    futuresStatus = `${futuresPct.toFixed(2)}% FLAT`;
-    futuresEmoji = "⚠️";
+    s1Score = 0; s1Status = `${vuaaChg.toFixed(2)}% FLAT`; s1Emoji = "⚠️";
   }
-  totalScore += futuresScore;
-  signals.push({
-    name: "FUTURES",
-    status: futuresStatus,
-    score: futuresScore,
-    emoji: futuresEmoji,
-  });
+  totalScore += s1Score;
+  signals.push({ name: "VUAA PRICE", status: s1Status, score: s1Score, emoji: s1Emoji });
 
-  // ── SIGNAL 2: VIX (weight 20%, max +1/-3) ──────────────────
+  // ── SIGNAL 2: VIX LEVEL ───────────────────────────────────────
   const vixLevel = vix.price || 20;
-  const vixChange = vix.changePct || 0;
-  let vixScore = 0;
-  let vixStatus = "";
-  let vixEmoji = "";
+  const vixChg = vix.changePct || 0;
+  let s2Score = 0, s2Status = "", s2Emoji = "";
 
   if (vixLevel > 25) {
-    vixScore = -3;
-    vixStatus = `${vixLevel.toFixed(1)} — TOO HIGH, SIT OUT`;
-    vixEmoji = "🚨";
-  } else if (vixChange < -2) {
-    vixScore = 1;
-    vixStatus = `${vixLevel.toFixed(1)} FALLING (${vixChange.toFixed(1)}%)`;
-    vixEmoji = "✅";
-  } else if (vixChange > 3) {
-    vixScore = -1;
-    vixStatus = `${vixLevel.toFixed(1)} RISING (${vixChange.toFixed(1)}%)`;
-    vixEmoji = "❌";
+    s2Score = -3; s2Status = `${vixLevel.toFixed(1)} TOO HIGH`; s2Emoji = "🚨";
+  } else if (vixChg < -2) {
+    s2Score = 1; s2Status = `${vixLevel.toFixed(1)} FALLING (${vixChg.toFixed(1)}%)`; s2Emoji = "✅";
+  } else if (vixChg > 3) {
+    s2Score = -1; s2Status = `${vixLevel.toFixed(1)} RISING (${vixChg.toFixed(1)}%)`; s2Emoji = "❌";
   } else {
-    vixScore = 0;
-    vixStatus = `${vixLevel.toFixed(1)} NEUTRAL`;
-    vixEmoji = "⚠️";
+    s2Score = 0; s2Status = `${vixLevel.toFixed(1)} NEUTRAL`; s2Emoji = "⚠️";
   }
-  totalScore += vixScore;
-  signals.push({
-    name: "VIX",
-    status: vixStatus,
-    score: vixScore,
-    emoji: vixEmoji,
-  });
+  totalScore += s2Score;
+  signals.push({ name: "VIX", status: s2Status, score: s2Score, emoji: s2Emoji });
 
-  // ── SIGNAL 3: SPY vs PREV CLOSE as VWAP proxy ──────────────
-  // Early session: price above prev close = buyers in control
-  const spyChange = spy.changePct || 0;
-  let vwapScore = 0;
-  let vwapStatus = "";
-  let vwapEmoji = "";
+  // ── SIGNAL 3: VUAA MOMENTUM ───────────────────────────────────
+  // Is VUAA above its opening price? (intraday trend)
+  const vuaaAboveOpen = vuaaChg > 0.1;
+  const vuaaBelowOpen = vuaaChg < -0.1;
+  let s3Score = 0, s3Status = "", s3Emoji = "";
 
-  if (spyChange > 0.1) {
-    vwapScore = 2;
-    vwapStatus = `SPY +${spyChange.toFixed(2)}% ABOVE PREV CLOSE`;
-    vwapEmoji = "✅";
-  } else if (spyChange < -0.1) {
-    vwapScore = -2;
-    vwapStatus = `SPY ${spyChange.toFixed(2)}% BELOW PREV CLOSE`;
-    vwapEmoji = "❌";
+  if (vuaaAboveOpen) {
+    s3Score = 2; s3Status = "ABOVE OPEN — BUYERS IN CONTROL"; s3Emoji = "✅";
+  } else if (vuaaBelowOpen) {
+    s3Score = -2; s3Status = "BELOW OPEN — SELLERS IN CONTROL"; s3Emoji = "❌";
   } else {
-    vwapScore = 0;
-    vwapStatus = `SPY ${spyChange.toFixed(2)}% FLAT`;
-    vwapEmoji = "⚠️";
+    s3Score = 0; s3Status = "FLAT — NO CLEAR DIRECTION"; s3Emoji = "⚠️";
   }
-  totalScore += vwapScore;
-  signals.push({
-    name: "PRICE ACTION",
-    status: vwapStatus,
-    score: vwapScore,
-    emoji: vwapEmoji,
-  });
+  totalScore += s3Score;
+  signals.push({ name: "MOMENTUM", status: s3Status, score: s3Score, emoji: s3Emoji });
 
-  // ── SIGNAL 4: MOMENTUM (futures + SPY aligned) ─────────────
-  let macdScore = 0;
-  let macdStatus = "";
-  let macdEmoji = "";
+  // ── SIGNAL 4: VIX vs VUAA ALIGNMENT ──────────────────────────
+  // When VIX is falling AND VUAA is rising — strong alignment
+  let s4Score = 0, s4Status = "", s4Emoji = "";
+  const strongBull = vixChg < 0 && vuaaChg > 0;
+  const strongBear = vixChg > 0 && vuaaChg < 0;
 
-  const bullishAlignment = futuresPct > 0 && spyChange > 0;
-  const bearishAlignment = futuresPct < 0 && spyChange < 0;
-
-  if (bullishAlignment) {
-    macdScore = 1;
-    macdStatus = "FUTURES + SPY ALIGNED BULLISH";
-    macdEmoji = "✅";
-  } else if (bearishAlignment) {
-    macdScore = -1;
-    macdStatus = "FUTURES + SPY ALIGNED BEARISH";
-    macdEmoji = "❌";
+  if (strongBull) {
+    s4Score = 1; s4Status = "VIX DOWN + VUAA UP — ALIGNED BULLISH"; s4Emoji = "✅";
+  } else if (strongBear) {
+    s4Score = -1; s4Status = "VIX UP + VUAA DOWN — ALIGNED BEARISH"; s4Emoji = "❌";
   } else {
-    macdScore = 0;
-    macdStatus = "MIXED SIGNALS";
-    macdEmoji = "⚠️";
+    s4Score = 0; s4Status = "MIXED SIGNALS"; s4Emoji = "⚠️";
   }
-  totalScore += macdScore;
-  signals.push({
-    name: "MOMENTUM",
-    status: macdStatus,
-    score: macdScore,
-    emoji: macdEmoji,
-  });
+  totalScore += s4Score;
+  signals.push({ name: "VIX/VUAA ALIGN", status: s4Status, score: s4Score, emoji: s4Emoji });
 
-  // ── SIGNAL 5: NEWS / MACRO EVENTS ──────────────────────────
-  let newsScore = 0;
-  let newsStatus = "";
-  let newsEmoji = "";
-
+  // ── SIGNAL 5: NEWS / MACRO ────────────────────────────────────
+  let s5Score = 0, s5Status = "", s5Emoji = "";
   if (newsData.hasEvent && newsData.events.length > 0) {
-    newsScore = -3;
-    newsStatus = `HIGH IMPACT: ${newsData.events.slice(0, 2).join(", ")}`;
-    newsEmoji = "🚨";
+    s5Score = -3; s5Status = `HIGH IMPACT: ${newsData.events.slice(0, 2).join(", ")}`; s5Emoji = "🚨";
   } else {
-    newsScore = 1;
-    newsStatus = "NO MAJOR EVENTS";
-    newsEmoji = "✅";
+    s5Score = 1; s5Status = "NO MAJOR EVENTS"; s5Emoji = "✅";
   }
-  totalScore += newsScore;
-  signals.push({
-    name: "NEWS/MACRO",
-    status: newsStatus,
-    score: newsScore,
-    emoji: newsEmoji,
-  });
+  totalScore += s5Score;
+  signals.push({ name: "NEWS/MACRO", status: s5Status, score: s5Score, emoji: s5Emoji });
 
-  // ── VERDICT ─────────────────────────────────────────────────
-  let verdict = "";
-  let verdictEmoji = "";
-  let action = "";
-
+  // ── VERDICT ───────────────────────────────────────────────────
+  let verdict, verdictEmoji, action;
   if (totalScore >= 4) {
-    verdict = "DEPLOY FULL AMOUNT";
-    verdictEmoji = "🟢";
-    action = "Target: +1.0% → cash out\nStop loss: -0.5% → cut immediately";
+    verdict = "BUY VUAA NOW"; verdictEmoji = "🟢";
+    action = "Target: +1.0% → sell\nStop loss: -0.5% → sell immediately";
   } else if (totalScore >= 2) {
-    verdict = "DEPLOY HALF AMOUNT";
-    verdictEmoji = "🟡";
-    action = "Target: +1.0% → cash out\nStop loss: -0.5% → cut immediately";
+    verdict = "BUY HALF POSITION"; verdictEmoji = "🟡";
+    action = "Target: +1.0% → sell\nStop loss: -0.5% → sell immediately";
   } else {
-    verdict = "SIT OUT — NO TRADE TODAY";
-    verdictEmoji = "🔴";
+    verdict = "SIT OUT — NO TRADE"; verdictEmoji = "🔴";
     action = "Conditions not favourable. Preserve capital.";
   }
 

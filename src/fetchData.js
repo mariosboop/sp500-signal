@@ -1,7 +1,8 @@
-// src/fetchData.js — fetches all signal data from free APIs
+// src/fetchData.js — fetches VUAA + VIX + news
+// VUAA = Vanguard S&P 500 UCITS ETF (EUR, London Stock Exchange)
+// Yahoo Finance ticker: VUAA.L
 import fetch from "node-fetch";
 
-// Fetch Yahoo Finance quote
 async function fetchYahoo(symbol) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d`;
   const res = await fetch(url, {
@@ -9,37 +10,32 @@ async function fetchYahoo(symbol) {
   });
   const json = await res.json();
   const meta = json?.chart?.result?.[0]?.meta;
-  return {
-    price: meta?.regularMarketPrice,
-    prevClose: meta?.chartPreviousClose || meta?.previousClose,
-    change: meta?.regularMarketPrice - (meta?.chartPreviousClose || meta?.previousClose),
-    changePct: ((meta?.regularMarketPrice - (meta?.chartPreviousClose || meta?.previousClose)) / (meta?.chartPreviousClose || meta?.previousClose)) * 100,
-  };
+  if (!meta) throw new Error(`No data for ${symbol}`);
+
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.chartPreviousClose || meta.previousClose;
+  const change = price - prevClose;
+  const changePct = (change / prevClose) * 100;
+
+  return { price, prevClose, change, changePct };
 }
 
-// Fetch economic calendar from Investing.com RSS
 async function fetchNewsEvents() {
-  // Check for major scheduled events today
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
-
-  // Weekend — no trading
+  const dayOfWeek = today.getDay();
   if (dayOfWeek === 0 || dayOfWeek === 6) {
     return { hasEvent: true, events: ["Weekend — no trading"] };
   }
 
-  // Fetch financial news headlines for red flags
   try {
     const res = await fetch(
-      "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC&region=US&lang=en-US",
+      "https://feeds.finance.yahoo.com/rss/2.0/headline?s=VUAA.L&region=GB&lang=en-US",
       { headers: { "User-Agent": "Mozilla/5.0" } }
     );
     const text = await res.text();
-
-    // Check for high-impact keywords
-    const redFlags = ["fed", "fomc", "powell", "cpi", "inflation", "jobs report", "nfp", "rate decision", "gdp"];
+    const redFlags = ["fed", "fomc", "powell", "cpi", "inflation", "jobs report", "nfp", "rate decision", "gdp", "ecb"];
     const lowerText = text.toLowerCase();
-    const foundFlags = redFlags.filter(flag => lowerText.includes(flag));
+    const foundFlags = redFlags.filter(f => lowerText.includes(f));
 
     if (foundFlags.length > 0) {
       return { hasEvent: true, events: foundFlags.map(f => f.toUpperCase()) };
@@ -51,21 +47,17 @@ async function fetchNewsEvents() {
 }
 
 export async function fetchAllData() {
-  console.log("📡 Fetching market data...");
+  console.log("📡 Fetching VUAA + VIX data...");
 
-  const [futures, vix, newsData] = await Promise.all([
-    fetchYahoo("ES=F"),      // S&P 500 futures
-    fetchYahoo("^VIX"),      // VIX
-    fetchNewsEvents(),        // News/macro events
+  const [vuaa, vix, newsData] = await Promise.all([
+    fetchYahoo("VUAA.L"),   // VUAA on London Stock Exchange
+    fetchYahoo("^VIX"),     // VIX fear index
+    fetchNewsEvents(),
   ]);
 
-  // Fetch SPY for VWAP approximation
-  const spy = await fetchYahoo("SPY");
+  console.log(`✅ VUAA: £${vuaa.price?.toFixed(2)} (${vuaa.changePct?.toFixed(2)}%)`);
+  console.log(`✅ VIX:  ${vix.price?.toFixed(2)} (${vix.changePct?.toFixed(2)}%)`);
+  console.log(`✅ News: ${newsData.hasEvent ? newsData.events.join(", ") : "clear"}`);
 
-  console.log(`✅ Futures: ${futures.changePct?.toFixed(2)}%`);
-  console.log(`✅ VIX: ${vix.price?.toFixed(2)} (${vix.changePct?.toFixed(2)}%)`);
-  console.log(`✅ SPY: $${spy.price?.toFixed(2)}`);
-  console.log(`✅ News events: ${newsData.hasEvent ? newsData.events.join(", ") : "none"}`);
-
-  return { futures, vix, spy, newsData };
+  return { vuaa, vix, newsData };
 }
