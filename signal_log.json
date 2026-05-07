@@ -32,17 +32,17 @@
           "score": 1
         }
       ],
-      "outcome": "up",
-      "vuaa_change": 1.23,
-      "correct": true,
-      "result": "✅ CORRECT — bought, VUAA up 1.23%",
-      "logged_at": "2026-05-07T06:16:59.088Z"
+      "outcome": null,
+      "vuaa_change": null,
+      "correct": null,
+      "result": null,
+      "logged_at": "2026-05-07T06:26:13.652Z"
     }
   ],
   "accuracy": {
-    "total": 1,
-    "correct": 1,
+    "total": 0,
+    "correct": 0,
     "wrong": 0,
-    "hit_rate": "100.0%"
+    "hit_rate": "N/A"
   }
 }

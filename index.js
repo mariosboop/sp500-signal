@@ -9,7 +9,7 @@ dotenv.config();
 import { fetchAllData } from "./src/fetchData.js";
 import { scoreSignals } from "./src/scoreSignals.js";
 import { sendTelegram, getChatId } from "./src/sendTelegram.js";
-import { logSignal, logOutcome, getTodayEntry, getAccuracyMessage, generateReport, CRITERIA } from "./src/tracker.js";
+import { logSignal, logOutcome, getTodayEntry, getAccuracyMessage, generateReport, clearTodayOutcome, CRITERIA } from "./src/tracker.js";
 import { fetchActualOutcome } from "./src/fetchOutcome.js";
 
 // ── MORNING MESSAGE ──────────────────────────────────────────────
@@ -115,12 +115,12 @@ async function runMorningSignal() {
 }
 
 // ── EVENING JOB ──────────────────────────────────────────────────
-async function runEveningOutcome() {
+async function runEveningOutcome(force = false) {
   const today = new Date().toISOString().split("T")[0];
   console.log(`\n[${new Date().toISOString()}] Evening outcome...`);
 
   try {
-    const outcome = await fetchActualOutcome();
+    const outcome = await fetchActualOutcome(force);
     const entry = logOutcome(today, outcome.changePct, outcome.direction);
 
     if (!entry) {
@@ -161,7 +161,12 @@ if (args[0] === "--setup") {
   runMorningSignal();
 
 } else if (args[0] === "--evening") {
-  runEveningOutcome();
+  // Force flag bypasses market hours check — for testing only
+  runEveningOutcome(args.includes("--force"));
+
+} else if (args[0] === "--clear") {
+  clearTodayOutcome();
+  console.log("Today's outcome cleared. Will be re-logged automatically at 22:00 CET.");
 
 } else if (args[0] === "--weekly") {
   sendTelegram(buildWeeklyMessage()).then(() => console.log("✅ Weekly report sent"));

@@ -7,11 +7,11 @@ export const CRITERIA = {
   version: "1.1",
   last_updated: "2026-05-07",
   signals: [
-    { id: 1, name: "VUAA PRICE",    weight: 30, description: "VUAA % change from prev close. >=+0.3%=+2, <=-0.3%=-2, flat=0" },
-    { id: 2, name: "VIX",           weight: 20, description: "Fear index. >25=-3, falling>2%=+1, rising>3%=-1, neutral=0" },
-    { id: 3, name: "MOMENTUM",      weight: 25, description: "VUAA vs open. Above=+2, Below=-2, Flat=0" },
-    { id: 4, name: "VIX/VUAA ALIGN",weight: 15, description: "VIX down + VUAA up=+1, VIX up + VUAA down=-1, mixed=0" },
-    { id: 5, name: "NEWS/MACRO",    weight: 10, description: "High impact event=-3, clear=+1" },
+    { id: 1, name: "VUAA PRICE",     weight: 30, description: "VUAA % change from prev close. >=+0.3%=+2, <=-0.3%=-2, flat=0" },
+    { id: 2, name: "VIX",            weight: 20, description: "Fear index. >25=-3, falling>2%=+1, rising>3%=-1, neutral=0" },
+    { id: 3, name: "MOMENTUM",       weight: 25, description: "VUAA vs open. Above=+2, Below=-2, Flat=0" },
+    { id: 4, name: "VIX/VUAA ALIGN", weight: 15, description: "VIX down + VUAA up=+1, VIX up + VUAA down=-1, mixed=0" },
+    { id: 5, name: "NEWS/MACRO",     weight: 10, description: "High impact event=-3, clear=+1" },
   ],
   verdicts: [
     { min: 4,   action: "BUY VUAA NOW" },
@@ -65,9 +65,14 @@ export function logSignal(date, verdict, score, signals) {
   const existing = log.signals.find(s => s.date === date);
 
   if (existing) {
+    // Reset outcome if signal is being re-logged
     existing.verdict = verdict;
     existing.score = score;
     existing.signals = signals;
+    existing.outcome = null;
+    existing.vuaa_change = null;
+    existing.correct = null;
+    existing.result = null;
     existing.logged_at = new Date().toISOString();
   } else {
     log.signals.push({
@@ -83,6 +88,7 @@ export function logSignal(date, verdict, score, signals) {
     });
   }
 
+  recalcAccuracy(log);
   saveLog(log);
   console.log(`✅ Signal logged: ${date} → ${verdict} (${score}/7)`);
 }
@@ -117,6 +123,23 @@ export function logOutcome(date, vuaaChange, direction) {
   saveLog(log);
   console.log(`✅ Outcome logged: ${date} → ${entry.result}`);
   return entry;
+}
+
+export function clearTodayOutcome() {
+  const today = new Date().toISOString().split("T")[0];
+  const log = loadLog();
+  const entry = log.signals.find(s => s.date === today);
+  if (entry) {
+    entry.outcome = null;
+    entry.vuaa_change = null;
+    entry.correct = null;
+    entry.result = null;
+    recalcAccuracy(log);
+    saveLog(log);
+    console.log(`✅ Cleared outcome for ${today} — will be re-logged at 22:00 CET`);
+  } else {
+    console.log(`No entry found for ${today}`);
+  }
 }
 
 export function getTodayEntry() {
@@ -154,13 +177,14 @@ export function generateReport() {
 
   const recent = [...signals].reverse().slice(0, 20);
   for (const s of recent) {
-    console.log(`  ${s.date} | Score ${s.score}/7 | ${s.verdict}`);
+    const icon = s.correct === true ? "✅" : s.correct === false ? "❌" : "⏳";
+    console.log(`  ${icon} ${s.date} | Score ${s.score}/7 | ${s.verdict}`);
     if (s.result) console.log(`           ${s.result}`);
+    else console.log(`           ⏳ Outcome pending (after 17:30 CET)`);
   }
 
   console.log("\n  KNOWN WEAKNESSES:");
   CRITERIA.weaknesses.forEach(w => console.log(`  ⚠️  ${w}`));
-
   console.log("\n  PENDING IMPROVEMENTS:");
   CRITERIA.improvements_pending.forEach(p => console.log(`  🔧 ${p}`));
   console.log("\n" + "═".repeat(55) + "\n");

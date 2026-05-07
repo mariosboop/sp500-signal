@@ -1,7 +1,22 @@
 // src/fetchOutcome.js — fetches VUAA actual close after market
+// VUAA trades 08:00-17:30 CET. Evening job runs at 22:00 CET.
 import fetch from "node-fetch";
 
-export async function fetchActualOutcome() {
+export async function fetchActualOutcome(force = false) {
+  // Safety check — don't run before market closes (17:30 CET = 15:30 UTC)
+  const nowUTC = new Date();
+  const hourUTC = nowUTC.getUTCHours();
+  const minuteUTC = nowUTC.getUTCMinutes();
+  const totalMinutesUTC = hourUTC * 60 + minuteUTC;
+  const marketCloseUTC = 15 * 60 + 30; // 15:30 UTC = 17:30 CET
+
+  if (!force && totalMinutesUTC < marketCloseUTC) {
+    const cetHour = hourUTC + 2;
+    throw new Error(
+      `Market not closed yet. VUAA closes at 17:30 CET. Current time: ${cetHour}:${String(minuteUTC).padStart(2,"0")} CET. Run after 17:30 CET.`
+    );
+  }
+
   console.log("📡 Fetching VUAA actual close...");
 
   try {
